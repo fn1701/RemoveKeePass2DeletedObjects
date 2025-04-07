@@ -79,7 +79,7 @@ Follow these steps to use the program:
    you are using a virtual environment, activate it before proceeding.
 5. Install the required dependencies by running:
 
-       pip install -r requirements.txt`.
+       pip install -r "requirements.txt".
 
 6. **Ensure that the KeePassXC database files are closed** (not open in KeePassXC or any other program).
 7. Run the program using:

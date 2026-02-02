@@ -107,11 +107,11 @@ def run():
         kee_share_groups = kp.xpath("//Group/CustomData/Item[Key='KeeShare/Reference']")
 
         kee_share_credentials = {}
-
+        db_dir = os.path.dirname(db_path)
         for element in kee_share_groups:
             ks_xml = ET.fromstring(base64.b64decode(kp.xpath("Value", tree=element)[0].text).decode("utf-8"))
             if ks_xml is not None:
-                ks_path = base64.b64decode(ks_xml.find("Path").text).decode("utf-8")
+                ks_path = os.path.abspath(os.path.join(db_dir, base64.b64decode(ks_xml.find("Path").text).decode("utf-8")))
                 ks_pw = base64.b64decode(ks_xml.find("Password").text).decode("utf-8")
                 kee_share_credentials[ks_path] = ks_pw
                 print(f"Found KeeShare group: {ks_path}")

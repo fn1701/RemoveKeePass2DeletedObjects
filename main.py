@@ -1,6 +1,7 @@
 import gc
 import pykeepass
 
+import sys
 import tkinter as tk
 from tkinter import filedialog, simpledialog
 from datetime import datetime
@@ -10,6 +11,8 @@ import shutil
 import base64
 import xml.etree.ElementTree as ET
 import zipfile
+
+import getpass
 
 from collections import Counter
 
@@ -68,13 +71,24 @@ def remove_deleted_objects(keepass, path):
 def run():
     global root
     global home_dir
-    print("Starting KeePass database cleanup...")  # Debugging statement
-    db_path = filedialog.askopenfilename(
-        title="Select your KeePass Database",
-        initialdir=home_dir,
-        filetypes=(("KeePass DB Files", "*.kdbx"),),
-        parent=root
-    )
+
+    # Check for headless mode
+    headless = len(sys.argv) > 1
+    db_path = sys.argv[1] if headless else None
+
+    if headless:
+        print("Running in headless mode...")
+        if not os.path.isfile(db_path):
+            print(f"Error: Database file '{db_path}' does not exist.")
+            return
+    else:
+        print("Starting KeePass database cleanup...")  # Debugging statement
+        db_path = filedialog.askopenfilename(
+            title="Select your KeePass Database",
+            initialdir=home_dir,
+            filetypes=(("KeePass DB Files", "*.kdbx"),),
+            parent=root
+        )
 
     if not db_path:
         print("No database selected, exiting.")
@@ -83,15 +97,21 @@ def run():
     kp = None
 
     try:
-        kp = pykeepass.PyKeePass(
-            db_path,
-            password=simpledialog.askstring(
+        password = None
+        if headless:
+            if len(sys.argv) > 2:
+                password = sys.argv[2]  # Use the provided password
+            else:
+                password = getpass.getpass(prompt="Enter KeePass password: ")  # Prompt for password securely
+        else:
+            password = simpledialog.askstring(
                 "Password",
                 prompt="Enter your KeePass password:",
                 show="*",
                 parent=root
             )
-        )
+
+        kp = pykeepass.PyKeePass(db_path, password=password)
         gc.collect()
         print("KeePass database loaded.")
 
@@ -123,7 +143,6 @@ def run():
                del ks_xml
             except NameError:
                 pass
-
 
         print("Creating backup of this database and all databases connected via KeeShare.")
         backup_target = os.path.join(os.path.dirname(db_path), "KeePass2DeletedObjects_backup")

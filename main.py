@@ -25,7 +25,10 @@ def get_file_name(file_path):
     return bkp_name
 
 def remove_deleted_objects(keepass, path):
+    print(f"Checking for deleted objects in: {path}")  # Debugging statement
     deleted_objects = keepass.xpath("//DeletedObjects/DeletedObject")
+
+    print(f"Deleted objects found: {len(deleted_objects)}")  # Debugging statement
 
     if len(deleted_objects) > 0:
         deleted_objects_count = 0
@@ -38,7 +41,7 @@ def remove_deleted_objects(keepass, path):
                 deletion_times[decoded_time] += 1
                 deleted_objects_count += 1
 
-        print("Deleted objects found:")
+        print("Deleted objects found:") # Debugging statement
         for time, count in sorted(deletion_times.items()):
             print(f"{time.strftime('%Y-%m-%d %H:%M:%S')}: {count}")
 
@@ -142,6 +145,7 @@ def run():
         except NameError:
             pass
         gc.collect()
+        print("Cleanup process completed.")  # Debugging statement
         exit()
 
 run()

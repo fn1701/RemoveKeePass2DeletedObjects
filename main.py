@@ -142,34 +142,7 @@ def run():
             print(f"Opening KeeShare database: {path}")
 
             if path.endswith(".kdbx.share"):
-                # Unzip the .kdbx.share file
-                folder_name = os.path.splitext(path)[0]  # Remove .kdbx.share extension
-                os.makedirs(folder_name, exist_ok=True)
-
-                with zipfile.ZipFile(path, 'r') as zip_ref:
-                    zip_ref.extractall(folder_name)
-
-                # Point to container.share.kdbx inside the extracted folder
-                container_path = os.path.join(folder_name, "container.share.kdbx")
-                print(f"Using container.share.kdbx at: {container_path}")
-
-                # Process the container.share.kdbx file
-                kee_share_kp = pykeepass.PyKeePass(container_path, password=password)
-                remove_deleted_objects(kee_share_kp, container_path)
-
-                # Re-zip the folder and replace the original .kdbx.share file
-                with zipfile.ZipFile(path, 'w', zipfile.ZIP_DEFLATED) as zip_ref:
-                    for root, _, files in os.walk(folder_name):
-                        for file in files:
-                            file_path = os.path.join(root, file)
-                            arcname = os.path.relpath(file_path, folder_name)
-                            zip_ref.write(file_path, arcname)
-
-                print(f"Updated .kdbx.share file: {path}")
-
-                # Clean up the extracted folder
-                shutil.rmtree(folder_name)
-
+                process_kdbx_share_file(path, password)
             else:
                 # Process regular KeeShare database
                 kee_share_kp = pykeepass.PyKeePass(path, password=password)
@@ -188,3 +161,32 @@ gc.collect()
 for var in list(locals().keys()):
     if var not in ("__builtins__", "__file__", "__name__", "__package__", "__doc__"):
         del locals()[var]
+
+def process_kdbx_share_file(path, password):
+    # Unzip the .kdbx.share file
+    folder_name = os.path.splitext(path)[0]  # Remove .kdbx.share extension
+    os.makedirs(folder_name, exist_ok=True)
+
+    with zipfile.ZipFile(path, 'r') as zip_ref:
+        zip_ref.extractall(folder_name)
+
+    # Point to container.share.kdbx inside the extracted folder
+    container_path = os.path.join(folder_name, "container.share.kdbx")
+    print(f"Using container.share.kdbx at: {container_path}")
+
+    # Process the container.share.kdbx file
+    kee_share_kp = pykeepass.PyKeePass(container_path, password=password)
+    remove_deleted_objects(kee_share_kp, container_path)
+
+    # Re-zip the folder and replace the original .kdbx.share file
+    with zipfile.ZipFile(path, 'w', zipfile.ZIP_DEFLATED) as zip_ref:
+        for root, _, files in os.walk(folder_name):
+            for file in files:
+                file_path = os.path.join(root, file)
+                arcname = os.path.relpath(file_path, folder_name)
+                zip_ref.write(file_path, arcname)
+
+    print(f"Updated .kdbx.share file: {path}")
+
+    # Clean up the extracted folder
+    shutil.rmtree(folder_name)

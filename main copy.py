@@ -9,7 +9,6 @@ import shutil
 
 import base64
 import xml.etree.ElementTree as ET
-import zipfile
 
 from collections import Counter
 
@@ -42,7 +41,7 @@ def remove_deleted_objects(keepass, path):
                 deletion_times[decoded_time] += 1
                 deleted_objects_count += 1
 
-        print("Deleted objects found:") # Debugging statement
+        print("Deleted objects details:")  # Debugging statement
         for time, count in sorted(deletion_times.items()):
             print(f"{time.strftime('%Y-%m-%d %H:%M:%S')}: {count}")
 
@@ -60,14 +59,12 @@ def remove_deleted_objects(keepass, path):
             print(f"{deletion_count} deleted objects were removed from the KeePass database.")
         else:
             print("Deleted objects were not removed from the KeePass database.")
-            return
+            return  # Replace exit() with return
     else:
         print("No deleted objects found in the KeePass database.")
-        return
+        return  # Replace exit() with return
 
 def run():
-    global root
-    global home_dir
     print("Starting KeePass database cleanup...")  # Debugging statement
     db_path = filedialog.askopenfilename(
         title="Select your KeePass Database",
@@ -78,7 +75,7 @@ def run():
 
     if not db_path:
         print("No database selected, exiting.")
-        return
+        return  # Replace exit() with return
 
     kp = None
 
@@ -97,20 +94,22 @@ def run():
 
     except Exception as e:
         print(f"Error loading KeePass database: {e}")
-        return
+        return  # Replace exit() with return
 
     finally:
         gc.collect()
 
     if not kp:
         print("KeePass database not loaded, exiting.")
-        return
+        return  # Replace exit() with return
 
     try:
         print("Searching for KeeShare Groups...")
         kee_share_groups = kp.xpath("//Group/CustomData/Item[Key='KeeShare/Reference']")
 
         kee_share_credentials = {}
+
+        # Resolve KeeShare paths relative to the KeePass database directory
         db_dir = os.path.dirname(db_path)
         for element in kee_share_groups:
             ks_xml = ET.fromstring(base64.b64decode(kp.xpath("Value", tree=element)[0].text).decode("utf-8"))
@@ -123,7 +122,6 @@ def run():
                del ks_xml
             except NameError:
                 pass
-
 
         print("Creating backup of this database and all databases connected via KeeShare.")
         backup_target = os.path.join(os.path.dirname(db_path), "KeePass2DeletedObjects_backup")
@@ -140,40 +138,8 @@ def run():
         remove_deleted_objects(kp, db_path)
         for path, password in kee_share_credentials.items():
             print(f"Opening KeeShare database: {path}")
-
-            if path.endswith(".kdbx.share"):
-                # Unzip the .kdbx.share file
-                folder_name = os.path.splitext(path)[0]  # Remove .kdbx.share extension
-                os.makedirs(folder_name, exist_ok=True)
-
-                with zipfile.ZipFile(path, 'r') as zip_ref:
-                    zip_ref.extractall(folder_name)
-
-                # Point to container.share.kdbx inside the extracted folder
-                container_path = os.path.join(folder_name, "container.share.kdbx")
-                print(f"Using container.share.kdbx at: {container_path}")
-
-                # Process the container.share.kdbx file
-                kee_share_kp = pykeepass.PyKeePass(container_path, password=password)
-                remove_deleted_objects(kee_share_kp, container_path)
-
-                # Re-zip the folder and replace the original .kdbx.share file
-                with zipfile.ZipFile(path, 'w', zipfile.ZIP_DEFLATED) as zip_ref:
-                    for root, _, files in os.walk(folder_name):
-                        for file in files:
-                            file_path = os.path.join(root, file)
-                            arcname = os.path.relpath(file_path, folder_name)
-                            zip_ref.write(file_path, arcname)
-
-                print(f"Updated .kdbx.share file: {path}")
-
-                # Clean up the extracted folder
-                shutil.rmtree(folder_name)
-
-            else:
-                # Process regular KeeShare database
-                kee_share_kp = pykeepass.PyKeePass(path, password=password)
-                remove_deleted_objects(kee_share_kp, path)
+            kee_share_kp = pykeepass.PyKeePass(path, password=password)
+            remove_deleted_objects(kee_share_kp, path)
 
     finally:
         try:
@@ -184,8 +150,7 @@ def run():
         print("Cleanup process completed.")  # Debugging statement
 
 run()
+gc.collect()
 for var in list(locals().keys()):
     if var not in ("__builtins__", "__file__", "__name__", "__package__", "__doc__"):
         del locals()[var]
-
-gc.collect()

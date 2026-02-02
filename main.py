@@ -59,10 +59,10 @@ def remove_deleted_objects(keepass, path):
             print(f"{deletion_count} deleted objects were removed from the KeePass database.")
         else:
             print("Deleted objects were not removed from the KeePass database.")
-            exit()
+            return
     else:
         print("No deleted objects found in the KeePass database.")
-        exit()
+        return
 
 def run():
     db_path = filedialog.askopenfilename(
@@ -74,7 +74,7 @@ def run():
 
     if not db_path:
         print("No database selected, exiting.")
-        exit()
+        return
 
     kp = None
 
@@ -93,14 +93,14 @@ def run():
 
     except Exception as e:
         print(f"Error loading KeePass database: {e}")
-        exit()
+        return
 
     finally:
         gc.collect()
 
     if not kp:
         print("KeePass database not loaded, exiting.")
-        exit()
+        return
 
     try:
         print("Searching for KeeShare Groups...")
@@ -146,7 +146,6 @@ def run():
             pass
         gc.collect()
         print("Cleanup process completed.")  # Debugging statement
-        exit()
 
 run()
 for var in list(locals().keys()):

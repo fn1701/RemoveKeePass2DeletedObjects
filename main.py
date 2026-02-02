@@ -184,8 +184,7 @@ def run():
         print("Cleanup process completed.")  # Debugging statement
 
 run()
+gc.collect()
 for var in list(locals().keys()):
     if var not in ("__builtins__", "__file__", "__name__", "__package__", "__doc__"):
         del locals()[var]
-
-gc.collect()

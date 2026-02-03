@@ -16,9 +16,6 @@ import getpass
 
 from collections import Counter
 
-root = tk.Tk()
-root.withdraw()
-
 home_dir = os.path.expanduser("~")
 
 def get_file_name(file_path):
@@ -105,7 +102,6 @@ def process_kdbx_share_file(path, password, headless=False, terminal=False):
     shutil.rmtree(folder_name)
 
 def run():
-    global root
     global home_dir
 
     # Determine mode based on command-line arguments
@@ -134,6 +130,8 @@ def run():
 
     elif gui:
         print("Running in GUI mode...")
+        root = tk.Tk()
+        root.withdraw()
         db_path = filedialog.askopenfilename(
             title="Select your KeePass Database",
             initialdir=home_dir,

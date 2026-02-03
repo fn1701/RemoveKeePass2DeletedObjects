@@ -42,5 +42,13 @@ RUN /bin/bash -c "set -e; python3 main.py /tmp/TestFiles/TestAbsoluteKdbxShare.k
 RUN /bin/bash -c "set -e; python3 main.py /tmp/TestFiles/TestRelativeKdbx.kdbx 'verySecurePassword4'"
 RUN /bin/bash -c "set -e; python3 main.py /tmp/TestFiles/TestRelativeKdbxShare.kdbx.share 'verySecurePassword5'"
 
+COPY test/TestFiles /tmp/TestFiles
+
+# Make main.py accessible from anywhere in the container
+RUN chmod +x /app/main.py && ln -s /app/main.py /usr/local/bin/main.py
+
 # Set /bin/bash as the default entrypoint
 ENTRYPOINT ["/bin/bash"]
+
+# Set the default working directory for the entrypoint
+WORKDIR /home/ubuntu/data

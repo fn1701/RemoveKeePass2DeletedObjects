@@ -109,7 +109,10 @@ Replace `/path/to/database.kdbx` with the path to your KeePass database file and
 To run the script in a Docker container and mount the current directory as `/home/ubuntu/data`:
 
 ```bash
-docker run --rm -v $(pwd):/home/ubuntu/data ghcr.io/<your-github-username>/remove-keepass2-deleted-objects:latest python3 /app/main.py /home/ubuntu/data/database.kdbx "yourPassword"
+docker pull ghcr.io/fn1701/remove-keepass2-deleted-objects:latest
+docker run --rm -v $(pwd):/home/ubuntu/data ghcr.io/fn1701/remove-keepass2-deleted-objects:latest
+# inside the container
+python /app/main.py TestFile0.kdbx 'verySecurePassword0'
 ```
 
 Replace `database.kdbx` with the name of your KeePass database file located in the current directory and `"yourPassword"` with the database password.

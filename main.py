@@ -28,7 +28,7 @@ def get_file_name(file_path):
     bkp_name = f"{name}_backup_{timestamp}{ext}"
     return bkp_name
 
-def remove_deleted_objects(keepass, path):
+def remove_deleted_objects(keepass, path, headless=False, terminal=False):
     print(f"Checking for deleted objects in: {path}")  # Debugging statement
     deleted_objects = keepass.xpath("//DeletedObjects/DeletedObject")
 
@@ -49,11 +49,18 @@ def remove_deleted_objects(keepass, path):
         for time, count in sorted(deletion_times.items()):
             print(f"{time.strftime('%Y-%m-%d %H:%M:%S')}: {count}")
 
-        ok_remove = tk.messagebox.askokcancel(
-            "Remove deleted objects?",
-            f"Found {deleted_objects_count} deleted objects in {path}. Shall we remove them from the database?",
-            parent=root,
-        )
+        if headless:
+            ok_remove = True
+        elif terminal:
+            user_input = input(f"Found {deleted_objects_count} deleted objects in {path}. Remove them? (y/n): ").strip().lower()
+            ok_remove = user_input == 'y'
+        else:
+            ok_remove = tk.messagebox.askokcancel(
+                "Remove deleted objects?",
+                f"Found {deleted_objects_count} deleted objects in {path}. Shall we remove them from the database?",
+                parent=root,
+            )
+
         if ok_remove:
             deletion_count = 0
             for element in deleted_objects:
@@ -68,49 +75,88 @@ def remove_deleted_objects(keepass, path):
         print("No deleted objects found in the KeePass database.")
         return
 
+def process_kdbx_share_file(path, password, headless=False, terminal=False):
+    # Unzip the .kdbx.share file
+    folder_name = os.path.splitext(path)[0]  # Remove .kdbx.share extension
+    os.makedirs(folder_name, exist_ok=True)
+
+    with zipfile.ZipFile(path, 'r') as zip_ref:
+        zip_ref.extractall(folder_name)
+
+    # Point to container.share.kdbx inside the extracted folder
+    container_path = os.path.join(folder_name, "container.share.kdbx")
+    print(f"Using container.share.kdbx at: {container_path}")
+
+    # Process the container.share.kdbx file
+    kee_share_kp = pykeepass.PyKeePass(container_path, password=password)
+    remove_deleted_objects(kee_share_kp, container_path, headless=headless, terminal=terminal)
+
+    # Re-zip the folder and replace the original .kdbx.share file
+    with zipfile.ZipFile(path, 'w', zipfile.ZIP_DEFLATED) as zip_ref:
+        for root, _, files in os.walk(folder_name):
+            for file in files:
+                file_path = os.path.join(root, file)
+                arcname = os.path.relpath(file_path, folder_name)
+                zip_ref.write(file_path, arcname)
+
+    print(f"Updated .kdbx.share file: {path}")
+
+    # Clean up the extracted folder
+    shutil.rmtree(folder_name)
+
 def run():
     global root
     global home_dir
 
-    # Check for headless mode
-    headless = len(sys.argv) > 1
-    db_path = sys.argv[1] if headless else None
+    # Determine mode based on command-line arguments
+    headless = len(sys.argv) > 2  # Headless mode requires both path and password
+    terminal = len(sys.argv) == 2  # Terminal mode requires only the path
+    gui = len(sys.argv) == 1  # GUI mode if no arguments are provided
+
+    db_path = None
+    password = None
 
     if headless:
         print("Running in headless mode...")
+        db_path = sys.argv[1]
+        password = sys.argv[2]
         if not os.path.isfile(db_path):
             print(f"Error: Database file '{db_path}' does not exist.")
             return
-    else:
-        print("Starting KeePass database cleanup...")  # Debugging statement
+
+    elif terminal:
+        print("Running in terminal mode...")
+        db_path = sys.argv[1]
+        if not os.path.isfile(db_path):
+            print(f"Error: Database file '{db_path}' does not exist.")
+            return
+        password = getpass.getpass(prompt="Enter KeePass password: ")
+
+    elif gui:
+        print("Running in GUI mode...")
         db_path = filedialog.askopenfilename(
             title="Select your KeePass Database",
             initialdir=home_dir,
-            filetypes=(("KeePass DB Files", "*.kdbx"),),
+            filetypes=[("KeePass DB Files", "*.kdbx")],
+            parent=root
+        )
+        if not db_path:
+            print("No database selected, exiting.")
+            return
+        password = simpledialog.askstring(
+            "Password",
+            prompt="Enter your KeePass password:",
+            show="*",
             parent=root
         )
 
-    if not db_path:
-        print("No database selected, exiting.")
+    if not db_path or not password:
+        print("Database path or password not provided, exiting.")
         return
 
     kp = None
 
     try:
-        password = None
-        if headless:
-            if len(sys.argv) > 2:
-                password = sys.argv[2]  # Use the provided password
-            else:
-                password = getpass.getpass(prompt="Enter KeePass password: ")  # Prompt for password securely
-        else:
-            password = simpledialog.askstring(
-                "Password",
-                prompt="Enter your KeePass password:",
-                show="*",
-                parent=root
-            )
-
         kp = pykeepass.PyKeePass(db_path, password=password)
         gc.collect()
         print("KeePass database loaded.")
@@ -156,16 +202,16 @@ def run():
             print(f"Backup of {key} created at {backup_filepath}")
 
         print("Searching for deleted objects...")
-        remove_deleted_objects(kp, db_path)
+        remove_deleted_objects(kp, db_path, headless=headless, terminal=terminal)
         for path, password in kee_share_credentials.items():
             print(f"Opening KeeShare database: {path}")
 
             if path.endswith(".kdbx.share"):
-                process_kdbx_share_file(path, password)
+                process_kdbx_share_file(path, password, headless=headless, terminal=terminal)
             else:
                 # Process regular KeeShare database
                 kee_share_kp = pykeepass.PyKeePass(path, password=password)
-                remove_deleted_objects(kee_share_kp, path)
+                remove_deleted_objects(kee_share_kp, path, headless=headless, terminal=terminal)
 
     finally:
         try:
@@ -180,32 +226,3 @@ gc.collect()
 for var in list(locals().keys()):
     if var not in ("__builtins__", "__file__", "__name__", "__package__", "__doc__"):
         del locals()[var]
-
-def process_kdbx_share_file(path, password):
-    # Unzip the .kdbx.share file
-    folder_name = os.path.splitext(path)[0]  # Remove .kdbx.share extension
-    os.makedirs(folder_name, exist_ok=True)
-
-    with zipfile.ZipFile(path, 'r') as zip_ref:
-        zip_ref.extractall(folder_name)
-
-    # Point to container.share.kdbx inside the extracted folder
-    container_path = os.path.join(folder_name, "container.share.kdbx")
-    print(f"Using container.share.kdbx at: {container_path}")
-
-    # Process the container.share.kdbx file
-    kee_share_kp = pykeepass.PyKeePass(container_path, password=password)
-    remove_deleted_objects(kee_share_kp, container_path)
-
-    # Re-zip the folder and replace the original .kdbx.share file
-    with zipfile.ZipFile(path, 'w', zipfile.ZIP_DEFLATED) as zip_ref:
-        for root, _, files in os.walk(folder_name):
-            for file in files:
-                file_path = os.path.join(root, file)
-                arcname = os.path.relpath(file_path, folder_name)
-                zip_ref.write(file_path, arcname)
-
-    print(f"Updated .kdbx.share file: {path}")
-
-    # Clean up the extracted folder
-    shutil.rmtree(folder_name)

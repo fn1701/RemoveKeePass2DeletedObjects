@@ -92,6 +92,67 @@ Follow these steps to use the program:
 9. After completion, open the main database as usual. If successful, the previously missing entries should now be
    present again.
 
+# Usage Examples
+
+## Running `main.py`
+
+To run the script directly with Python:
+
+```bash
+python main.py /path/to/database.kdbx "yourPassword"
+```
+
+Replace `/path/to/database.kdbx` with the path to your KeePass database file and `"yourPassword"` with the database password.
+
+## Running with Docker
+
+To run the script in a Docker container and mount the current directory as `/home/ubuntu/data`:
+
+```bash
+docker run --rm -v $(pwd):/home/ubuntu/data ghcr.io/<your-github-username>/remove-keepass2-deleted-objects:latest python3 /app/main.py /home/ubuntu/data/database.kdbx "yourPassword"
+```
+
+Replace `database.kdbx` with the name of your KeePass database file located in the current directory and `"yourPassword"` with the database password.
+
+Ensure that the Docker image has been built and pushed to the GitHub Container Registry as described in the GitHub Actions workflow.
+
+## Modes of Operation
+
+This program supports three modes of operation:
+
+### GUI Mode
+
+- **Description**: The program runs with a graphical user interface (GUI) using `tkinter`.
+- **How to Use**: Simply run the program without any command-line arguments:
+
+  ```bash
+  python main.py
+  ```
+
+- **Behavior**: A file dialog will appear to select the KeePass database, and a password prompt will follow.
+
+### Terminal Mode
+
+- **Description**: The program runs in the terminal, prompting the user for input.
+- **How to Use**: Provide the path to the KeePass database as a command-line argument:
+
+  ```bash
+  python main.py /path/to/database.kdbx
+  ```
+
+  The program will prompt for the password in the terminal.
+
+### Headless Mode
+
+- **Description**: The program runs without any user interaction, suitable for automation.
+- **How to Use**: Provide both the path to the KeePass database and the password as command-line arguments:
+
+  ```bash
+  python main.py /path/to/database.kdbx "yourPassword"
+  ```
+
+- **Behavior**: The program will process the database and connected databases automatically without any prompts.
+
 # Disclaimer
 
 This should go without saying but **this program is provided "as is" without any warranty**. Use it at **own

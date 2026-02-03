@@ -25,7 +25,7 @@ def get_file_name(file_path):
     bkp_name = f"{name}_backup_{timestamp}{ext}"
     return bkp_name
 
-def remove_deleted_objects(keepass, path, headless=False, terminal=False):
+def remove_deleted_objects(keepass, path, headless=False, terminal=False, root=None):
     print(f"Checking for deleted objects in: {path}")  # Debugging statement
     deleted_objects = keepass.xpath("//DeletedObjects/DeletedObject")
 
@@ -118,14 +118,14 @@ def run():
         password = sys.argv[2]
         if not os.path.isfile(db_path):
             print(f"Error: Database file '{db_path}' does not exist.")
-            return
+            return 1
 
     elif terminal:
         print("Running in terminal mode...")
         db_path = sys.argv[1]
         if not os.path.isfile(db_path):
             print(f"Error: Database file '{db_path}' does not exist.")
-            return
+            return 1
         password = getpass.getpass(prompt="Enter KeePass password: ")
 
     elif gui:
@@ -140,7 +140,7 @@ def run():
         )
         if not db_path:
             print("No database selected, exiting.")
-            return
+            return 1
         password = simpledialog.askstring(
             "Password",
             prompt="Enter your KeePass password:",
@@ -150,7 +150,7 @@ def run():
 
     if not db_path or not password:
         print("Database path or password not provided, exiting.")
-        return
+        return 1
 
     kp = None
 
@@ -161,14 +161,14 @@ def run():
 
     except Exception as e:
         print(f"Error loading KeePass database: {e}")
-        return
+        return 1
 
     finally:
         gc.collect()
 
     if not kp:
         print("KeePass database not loaded, exiting.")
-        return
+        return 1
 
     try:
         print("Searching for KeeShare Groups...")
@@ -200,7 +200,7 @@ def run():
             print(f"Backup of {key} created at {backup_filepath}")
 
         print("Searching for deleted objects...")
-        remove_deleted_objects(kp, db_path, headless=headless, terminal=terminal)
+        remove_deleted_objects(kp, db_path, headless=headless, terminal=terminal, root=root if gui else None)
         for path, password in kee_share_credentials.items():
             print(f"Opening KeeShare database: {path}")
 
@@ -209,7 +209,7 @@ def run():
             else:
                 # Process regular KeeShare database
                 kee_share_kp = pykeepass.PyKeePass(path, password=password)
-                remove_deleted_objects(kee_share_kp, path, headless=headless, terminal=terminal)
+                remove_deleted_objects(kee_share_kp, path, headless=headless, terminal=terminal, root=root if gui else None)
 
     finally:
         try:
@@ -224,3 +224,4 @@ gc.collect()
 for var in list(locals().keys()):
     if var not in ("__builtins__", "__file__", "__name__", "__package__", "__doc__"):
         del locals()[var]
+exit(0)

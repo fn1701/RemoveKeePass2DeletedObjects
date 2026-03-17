@@ -110,7 +110,8 @@ To run the script in a Docker container and mount the current directory as `/hom
 
 ```bash
 docker pull ghcr.io/fn1701/remove-keepass2-deleted-objects:latest
-docker run --rm -v $(pwd):/home/ubuntu/data ghcr.io/fn1701/remove-keepass2-deleted-objects:latest
+# run as current user to avoid issues with files written as docker user (usually root)
+docker run -it --rm --user "$(id -u):$(id -g)" -v $(pwd):/home/ubuntu/data ghcr.io/fn1701/remove-keepass2-deleted-objects:latest
 # inside the container
 python /app/main.py TestFile0.kdbx 'verySecurePassword0'
 ```

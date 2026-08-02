@@ -112,6 +112,16 @@ To run the script in a Docker container and mount the current directory as `/hom
 docker pull ghcr.io/fn1701/remove-keepass2-deleted-objects:latest
 # run as current user to avoid issues with files written as docker user (usually root)
 docker run -it --rm --user "$(id -u):$(id -g)" -v $(pwd):/home/ubuntu/data ghcr.io/fn1701/remove-keepass2-deleted-objects:latest
+# additional flags harden the container so it can only access the mounted data directory
+docker run -it --rm \
+  --network none \
+  --cap-drop ALL \
+  --security-opt no-new-privileges \
+  --read-only \
+  --user "$(id -u):$(id -g)" \
+  -v $(pwd):/home/ubuntu/data \
+  ghcr.io/fn1701/remove-keepass2-deleted-objects:latest
+
 # inside the container
 python /app/main.py TestFile0.kdbx 'verySecurePassword0'
 ```
@@ -160,7 +170,8 @@ This program supports three modes of operation:
 # Disclaimer
 
 This should go without saying but **this program is provided "as is" without any warranty**. Use it at **own
-risk**. The author is **not responsible** for any damage or loss of data that may occur as a result of using this
+risk**. The author is **not responsible** for any damage or loss of data that may occur as a result orisk**. The author is **not responsible** for any damage or loss of data that may occur as a result of using this
+f using this
 program.
 
 [1]: https://github.com/keepassxreboot/keepassxc/issues/6477
